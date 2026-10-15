@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RecompHub — PC Game Recompilation & Decompilation Directory</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; background-color: #090d16; color: #f1f5f9; }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+    .scanlines {
+      background-image: repeating-linear-gradient(
+        0deg,
+        rgba(0, 0, 0, 0.22),
+        rgba(0, 0, 0, 0.22) 1px,
+        transparent 1px,
+        transparent 3px
+      );
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col selection:bg-indigo-500 selection:text-white">
+
+  <!-- Top Navbar -->
+  <header class="sticky top-0 z-30 backdrop-blur-md bg-[#090d16]/85 border-b border-slate-800/80">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20 font-extrabold text-lg">
+          R
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="font-extrabold text-lg tracking-tight text-white">Recomp<span class="text-indigo-400">Hub</span></span>
+            <button
+              id="syncBadge"
+              onclick="openDiagModal()"
+              title="Click for connection status details"
+              class="text-[11px] mono px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700 cursor-pointer hover:opacity-90 transition"
+            >
+              Syncing...
+            </button>
+          </div>
+          <p class="text-xs text-slate-400 hidden sm:block">GitHub PC Recompilation & Native Port Tracker</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2.5">
+        <button onclick="openSubmitModal()" class="px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/25 transition flex items-center gap-1.5">
+          Submit Project
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero & Filters -->
+  <section class="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 pt-8 pb-6">
+    <div class="bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 border border-slate-800 rounded-2xl p-6 mb-6">
+      <h1 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight mb-2">
+        Native PC Recompilations & Decompilations
+      </h1>
+      <p class="text-slate-400 text-sm max-w-3xl">
+        Community-curated index of static recompilations, full decompilations, and native PC ports hosted on GitHub, complete with cover art, official ROM/asset purchase links, and hash verification requirements.
+      </p>
+
+      <!-- Search + Dropdowns -->
+      <div class="mt-5 grid grid-cols-1 sm:grid-cols-4 gap-3">
+        <div class="sm:col-span-2 relative">
+          <input
+            id="searchInput"
+            type="text"
+            oninput="renderProjects()"
+            placeholder="Search game title, platform, or method..."
+            class="w-full bg-slate-950/90 border border-slate-800 focus:border-indigo-500 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 outline-none"
+          />
+        </div>
+        <div>
+          <select id="platformFilter" onchange="renderProjects()" class="w-full bg-slate-950/90 border border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2.5 text-sm text-slate-200 outline-none">
+            <option value="ALL">All Platforms</option>
+            <option value="N64">Nintendo 64</option>
+            <option value="GameCube">Nintendo GameCube</option>
+            <option value="Wii">Nintendo Wii</option>
+            <option value="Wii U">Nintendo Wii U</option>
+            <option value="Switch">Nintendo Switch</option>
+            <option value="PS1">PlayStation 1</option>
+            <option value="PS2">PlayStation 2</option>
+            <option value="PS3">PlayStation 3</option>
+            <option value="PS4">PlayStation 4</option>
+            <option value="PS5">PlayStation 5</option>
+            <option value="Xbox">Xbox</option>
+            <option value="Xbox 360">Xbox 360</option>
+            <option value="Xbox One">Xbox One</option>
+            <option value="PSP / Vita">PSP / PS Vita</option>
+            <option value="GBA / SNES">GBA / SNES</option>
+            <option value="PC / DOS">PC / DOS</option>
+          </select>
+        </div>
+        <div>
+          <select id="statusFilter" onchange="renderProjects()" class="w-full bg-slate-950/90 border border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2.5 text-sm text-slate-200 outline-none">
+            <option value="ALL">All Build Statuses</option>
+            <option value="Playable">Playable</option>
+            <option value="In Progress">In Progress</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Grid Counter -->
+    <div class="flex items-center justify-between mb-4">
+      <span id="projectCount" class="text-xs font-medium text-slate-400 mono">Loading projects...</span>
+      <button onclick="fetchFromGoogleSheet()" class="text-xs text-indigo-400 hover:text-indigo-300 font-medium flex items-center gap-1">
+        Refresh List
+      </button>
+    </div>
+
+    <!-- Cards Grid -->
+    <div id="projectsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5"></div>
+  </section>
+
+  <!-- Submit Project Modal -->
+  <div id="submitModal" class="fixed inset-0 z-50 hidden bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl my-8">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-bold text-white">Submit Recompilation Project</h2>
+        <button onclick="closeSubmitModal()" class="text-slate-400 hover:text-white text-xl">&times;</button>
+      </div>
+      <form id="submitForm" onsubmit="handleProjectSubmit(event)" class="space-y-3.5 text-sm">
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">Game / Project Title *</label>
+          <input id="fTitle" required placeholder="e.g., Bloodborne PC / Banjo Recompiled" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-white" />
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Original Platform *</label>
+            <select id="fPlatform" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-white">
+              <option value="N64">Nintendo 64</option>
+              <option value="GameCube">Nintendo GameCube</option>
+              <option value="Wii">Nintendo Wii</option>
+              <option value="Wii U">Nintendo Wii U</option>
+              <option value="Switch">Nintendo Switch</option>
+              <option value="PS1">PlayStation 1</option>
+              <option value="PS2">PlayStation 2</option>
+              <option value="PS3">PlayStation 3</option>
+              <option value="PS4">PlayStation 4</option>
+              <option value="PS5">PlayStation 5</option>
+              <option value="Xbox">Xbox</option>
+              <option value="Xbox 360">Xbox 360</option>
+              <option value="Xbox One">Xbox One</option>
+              <option value="PSP / Vita">PSP / PS Vita</option>
+              <option value="GBA / SNES">GBA / SNES</option>
+              <option value="PC / DOS">PC / DOS</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Status *</label>
+            <select id="fStatus" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-white">
+              <option value="Playable">Playable</option>
+              <option value="In Progress">In Progress</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Method</label>
+            <select id="fMethod" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-white">
+              <option value="Static Recompilation">Static Recompilation</option>
+              <option value="Full Decompilation">Full Decompilation</option>
+              <option value="Engine Reimplementation">Engine Reimplementation</option>
+              <option value="Translation Layer / Port">Translation Layer / Port</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Fallback Color Theme</label>
+            <select id="fColor" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-white">
+              <option value="from-purple-600 to-indigo-900">Royal Purple</option>
+              <option value="from-emerald-600 to-teal-900">Emerald Green</option>
+              <option value="from-rose-600 to-red-900">Crimson Red</option>
+              <option value="from-amber-500 to-orange-900">Sunset Gold</option>
+              <option value="from-cyan-600 to-blue-900">Cyber Blue</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">Cover Art Image URL (Optional — uses gradient if left blank)</label>
+          <input id="fCoverImage" type="url" placeholder="https://images.igdb.com/... or direct .jpg/.png link" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-white" />
+        </div>
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">GitHub Repository URL *</label>
+          <input id="fGithub" type="url" required placeholder="https://github.com/..." class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-white" />
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">ROM / Asset Source Name *</label>
+            <input id="fRomLabel" required placeholder="e.g., PlayStation Store / Archive" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-white" />
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">ROM / Storefront Link *</label>
+            <input id="fRomUrl" type="url" required placeholder="https://..." class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-white" />
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">Required ROM / PKG Version & SHA-1 Hash Info</label>
+          <input id="fHash" placeholder="e.g., US 1.0 (.z64) or Game Dump" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-white" />
+        </div>
+
+        <div class="pt-2 flex items-center justify-end gap-2">
+          <button type="button" onclick="closeSubmitModal()" class="px-4 py-2 rounded-lg text-xs font-medium bg-slate-800 text-slate-300">Cancel</button>
+          <button id="submitBtn" type="submit" class="px-4 py-2 rounded-lg text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white">
+            Submit Project
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Hash Verification Modal -->
+  <div id="hashModal" class="fixed inset-0 z-50 hidden bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl">
+      <h3 id="hashModalTitle" class="text-base font-bold text-white mb-2">Asset Requirements</h3>
+      <p id="hashModalBody" class="text-xs mono bg-slate-950 border border-slate-800 rounded-lg p-3 text-indigo-300 break-all mb-4"></p>
+      <div class="flex justify-end">
+        <button onclick="document.getElementById('hashModal').classList.add('hidden')" class="px-4 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 text-white">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Diagnostic Status Modal -->
+  <div id="diagModal" class="fixed inset-0 z-50 hidden bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl">
+      <h3 class="text-base font-bold text-white mb-2">Database Connection Status</h3>
+      <p id="diagMessage" class="text-xs text-slate-300 mb-4 leading-relaxed"></p>
+      <div class="text-[11px] text-slate-400 bg-slate-950 border border-slate-800 rounded-lg p-3 space-y-1.5 mb-4">
+        <p class="font-semibold text-slate-200">Quick Troubleshooting Checklist:</p>
+        <p>1. In Google Apps Script, click <b>Deploy &rarr; Manage deployments</b>.</p>
+        <p>2. Click the <b>Edit</b> button, set <b>Version: New version</b>, and make sure <b>Who has access</b> is set to <b>Anyone</b>.</p>
+        <p>3. Ensure Row 1 of your <b>projects</b> tab has headers ending with <code>coverImage</code> and <code>approved</code> (or leave the sheet completely empty so the script auto-creates them).</p>
+      </div>
+      <div class="flex justify-end">
+        <button onclick="document.getElementById('diagModal').classList.add('hidden')" class="px-4 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 text-white">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Hardcoded Google Apps Script Web App Endpoint
+    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxdCRYG9ChgEMBMHUkN9y-IlVIFyoF4KEeb_TMOo1y2oGKs0WEKumBTZc664PLWZ-Mm/exec";
+
+    let lastSyncStatus = "Connecting to Google Sheet...";
+
+    // starterkit
+    const STARTER_PROJECTS = [
+      {
+        id: "zelda64recomp",
+        title: "Zelda: Majora's Mask Recompiled",
+        platform: "N64",
+        method: "Static Recompilation",
+        status: "Playable",
+        githubUrl: "https://github.com/Zelda64Recomp/Zelda64Recomp",
+        romSourceLabel: "Archive / N64 Cart Dump",
+        romUrl: "https://archive.org/details/software",
+        coverColor: "from-purple-700 to-indigo-950",
+        coverImage: "https://upload.wikimedia.org/wikipedia/en/6/60/The_Legend_of_Zelda_-_Majora%27s_Mask_Box_Art.jpg",
+        romHash: "US 1.0 Uncompressed (.z64) | SHA-1: 5354631C03A2F1916D7B23D85D0E97E6B0D9F72B"
+      },
+      {
+        id: "unleashedrecomp",
+        title: "Sonic Unleashed Recompiled",
+        platform: "Xbox 360",
+        method: "Static Recompilation",
+        status: "Playable",
+        githubUrl: "https://github.com/hedge-dev/UnleashedRecomp",
+        romSourceLabel: "Xbox Store / Disc ISO",
+        romUrl: "https://www.xbox.com/en-US/games/store/sonic-unleashed/c098fgnmts8f",
+        coverColor: "from-blue-600 to-indigo-950",
+        coverImage: "https://upload.wikimedia.org/wikipedia/en/a/a0/Sonic_Unleashed_boxart.jpg",
+        romHash: "Xbox 360 Title Update + Base Game ISO/XEX files required."
+      },
+      {
+        id: "shadps4_bloodborne",
+        title: "Bloodborne (shadPS4 Native Translation)",
+        platform: "PS4",
+        method: "Translation Layer / Port",
+        status: "Playable",
+        githubUrl: "https://github.com/shadps4-emu/shadPS4",
+        romSourceLabel: "PS Store / PS4 Disc PKG",
+        romUrl: "https://store.playstation.com/en-us/product/UP9000-CUSA00900_00-BLOODBORNE000000",
+        coverColor: "from-slate-800 to-rose-950",
+        coverImage: "https://upload.wikimedia.org/wikipedia/en/6/68/Bloodborne_Cover_Wallpaper.jpg",
+        romHash: "CUSA00900 / CUSA03173 Base Game + Patch 1.09 Decrypted PKG required."
+      },
+      {
+        id: "shipofharkinian",
+        title: "Ship of Harkinian (Ocarina of Time)",
+        platform: "N64",
+        method: "Full Decompilation",
+        status: "Playable",
+        githubUrl: "https://github.com/HarbourMasters/Shipwright",
+        romSourceLabel: "Archive / PAL or NTSC ROM",
+        romUrl: "https://archive.org/details/software",
+        coverColor: "from-emerald-600 to-teal-950",
+        coverImage: "https://upload.wikimedia.org/wikipedia/en/5/57/The_Legend_of_Zelda_Ocarina_of_Time.jpg",
+        romHash: "Supports PAL 1.0/1.1 & NTSC/GameCube Master Quest (.z64)"
+      },
+      {
+        id: "opengoal",
+        title: "OpenGOAL (Jak & Daxter / Jak II)",
+        platform: "PS2",
+        method: "Static Recompilation",
+        status: "Playable",
+        githubUrl: "https://github.com/open-goal/jak-project",
+        romSourceLabel: "PS2 ISO Archive",
+        romUrl: "https://archive.org/details/software",
+        coverColor: "from-amber-500 to-orange-950",
+        coverImage: "https://upload.wikimedia.org/wikipedia/en/7/79/Jak_and_Daxter_-_The_Precursor_Legacy_Coverart.png",
+        romHash: "NTSC-U / PAL PS2 ISO image required for asset extraction."
+      }
+    ];
+
+    let allProjects = [...STARTER_PROJECTS];
+
+    async function fetchFromGoogleSheet() {
+      const badge = document.getElementById("syncBadge");
+      badge.textContent = "Syncing...";
+      badge.className = "text-[11px] mono px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700 cursor-pointer";
+
+      try {
+        const res = await fetch(GOOGLE_SCRIPT_URL, {
+          method: "GET",
+          redirect: "follow"
+        });
+        const json = await res.json();
+
+        if (json && json.status === "error") {
+          throw new Error(json.message || "Apps Script returned an error.");
+        }
+
+        if (json && Array.isArray(json.data)) {
+          const existingIds = new Set(json.data.map(p => p.id));
+          const merged = [
+            ...json.data.reverse(),
+            ...STARTER_PROJECTS.filter(p => !existingIds.has(p.id))
+          ];
+          allProjects = merged;
+          badge.textContent = `Live DB (${json.data.length} cloud)`;
+          badge.className = "text-[11px] mono px-2 py-0.5 rounded-full bg-emerald-950/80 text-emerald-300 border border-emerald-700/60 cursor-pointer";
+          lastSyncStatus = `Connected to Google Sheet! Loaded ${json.data.length} community project(s) + ${STARTER_PROJECTS.length} starter projects.`;
+        }
+      } catch (err) {
+        console.warn("Google Sheet sync error:", err);
+        badge.textContent = "Offline Fallback (Click for info)";
+        badge.className = "text-[11px] mono px-2 py-0.5 rounded-full bg-rose-950/80 text-rose-300 border border-rose-700/60 cursor-pointer";
+        lastSyncStatus = "Could not load from Google Sheet (" + err.message + "). Showing built-in starter projects.";
+      }
+      renderProjects();
+    }
+
+    async function handleProjectSubmit(e) {
+      e.preventDefault();
+      const btn = document.getElementById("submitBtn");
+      btn.disabled = true;
+      btn.textContent = "Submitting...";
+
+      const newProj = {
+        id: "proj_" + Date.now(),
+        title: document.getElementById("fTitle").value.trim(),
+        platform: document.getElementById("fPlatform").value,
+        status: document.getElementById("fStatus").value,
+        method: document.getElementById("fMethod").value,
+        coverColor: document.getElementById("fColor").value,
+        coverImage: document.getElementById("fCoverImage").value.trim(),
+        githubUrl: document.getElementById("fGithub").value.trim(),
+        romSourceLabel: document.getElementById("fRomLabel").value.trim(),
+        romUrl: document.getElementById("fRomUrl").value.trim(),
+        romHash: document.getElementById("fHash").value.trim() || "Refer to GitHub README for ROM/PKG SHA-1 checksum."
+      };
+
+      // Immediately add to UI so user sees instant feedback
+      allProjects.unshift(newProj);
+      renderProjects();
+
+      try {
+        await fetch(GOOGLE_SCRIPT_URL, {
+          method: "POST",
+          redirect: "follow",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify(newProj)
+        });
+        setTimeout(() => fetchFromGoogleSheet(), 1200);
+      } catch (err) {
+        console.warn("POST fallback:", err);
+      }
+
+      btn.disabled = false;
+      btn.textContent = "Submit Project";
+      document.getElementById("submitForm").reset();
+      closeSubmitModal();
+    }
+
+    function renderProjects() {
+      const q = document.getElementById("searchInput").value.toLowerCase();
+      const plat = document.getElementById("platformFilter").value;
+      const stat = document.getElementById("statusFilter").value;
+
+      const filtered = allProjects.filter(p => {
+        const matchQ =
+          !q ||
+          String(p.title).toLowerCase().includes(q) ||
+          String(p.platform).toLowerCase().includes(q) ||
+          String(p.method).toLowerCase().includes(q);
+        const matchPlat = plat === "ALL" || p.platform === plat;
+        const matchStat = stat === "ALL" || p.status === stat;
+        return matchQ && matchPlat && matchStat;
+      });
+
+      document.getElementById("projectCount").textContent =
+        `Showing ${filtered.length} of ${allProjects.length} projects`;
+
+      const grid = document.getElementById("projectsGrid");
+      grid.innerHTML = filtered
+        .map(p => {
+          const isPlayable = p.status === "Playable";
+          const hasImage = p.coverImage && String(p.coverImage).trim().startsWith("http");
+
+          return `
+          <article class="bg-slate-900/90 border border-slate-800 hover:border-indigo-500/60 rounded-2xl overflow-hidden flex flex-col transition shadow-lg group">
+            <!-- Game Cover Art Header -->
+            <div class="h-48 bg-gradient-to-br ${p.coverColor || 'from-indigo-600 to-purple-900'} relative p-4 flex flex-col justify-between scanlines overflow-hidden">
+              ${
+                hasImage
+                  ? `<img
+                      src="${escapeHtml(p.coverImage)}"
+                      alt="${escapeHtml(p.title)}"
+                      onerror="this.style.display='none'"
+                      class="absolute inset-0 w-full h-full object-cover object-center group-hover:scale-105 transition duration-500 opacity-85"
+                    />
+                    <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/45 to-black/30"></div>`
+                  : ``
+              }
+              <div class="flex items-center justify-between z-10">
+                <span class="px-2.5 py-0.5 rounded-md text-[11px] font-bold uppercase tracking-wider bg-black/65 backdrop-blur-md text-white border border-white/15 mono">
+                  ${escapeHtml(p.platform)}
+                </span>
+                <span class="px-2.5 py-0.5 rounded-full text-[11px] font-semibold backdrop-blur-md ${
+                  isPlayable
+                    ? "bg-emerald-500/25 text-emerald-200 border border-emerald-400/40"
+                    : "bg-amber-500/25 text-amber-200 border border-amber-400/40"
+                }">
+                  ${escapeHtml(p.status)}
+                </span>
+              </div>
+              <div class="z-10 flex items-end justify-between gap-2">
+                <h3 class="font-extrabold text-white text-base leading-snug drop-shadow-md">${escapeHtml(p.title)}</h3>
+              </div>
+            </div>
+
+            <!-- Card Body -->
+            <div class="p-4 flex-1 flex flex-col justify-between space-y-4">
+              <div>
+                <div class="text-[11px] text-indigo-400 font-semibold uppercase tracking-wider mono mb-2">
+                  ${escapeHtml(p.method)}
+                </div>
+                <button
+                  onclick="showHashInfo('${escapeQuotes(p.title)}', '${escapeQuotes(p.romHash || '')}')"
+                  class="w-full text-left text-xs text-slate-400 hover:text-slate-200 bg-slate-950/70 border border-slate-800/90 rounded-lg px-2.5 py-1.5 truncate mono"
+                >
+                  Hash / Asset Info: ${escapeHtml(p.romHash || "Click to view")}
+                </button>
+              </div>
+
+              <!-- Links -->
+              <div class="grid grid-cols-2 gap-2 pt-1">
+                <a
+                  href="${escapeHtml(p.githubUrl)}"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="px-3 py-2 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-white text-center transition"
+                >
+                  GitHub Repo
+                </a>
+                <a
+                  href="${escapeHtml(p.romUrl)}"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="px-3 py-2 rounded-xl text-xs font-semibold bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 text-center truncate transition"
+                  title="${escapeHtml(p.romSourceLabel)}"
+                >
+                  ROM: ${escapeHtml(p.romSourceLabel)}
+                </a>
+              </div>
+            </div>
+          </article>
+        `;
+        })
+        .join("");
+    }
+
+    function showHashInfo(title, hash) {
+      document.getElementById("hashModalTitle").textContent = title + " — ROM / Asset Info";
+      document.getElementById("hashModalBody").textContent = hash;
+      document.getElementById("hashModal").classList.remove("hidden");
+    }
+
+    function openDiagModal() {
+      document.getElementById("diagMessage").textContent = lastSyncStatus;
+      document.getElementById("diagModal").classList.remove("hidden");
+    }
+
+    function openSubmitModal() { document.getElementById("submitModal").classList.remove("hidden"); }
+    function closeSubmitModal() { document.getElementById("submitModal").classList.add("hidden"); }
+
+    function escapeHtml(str) {
+      return String(str || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function escapeQuotes(str) {
+      return String(str || "").replace(/'/g, "\\'").replace(/"/g, "&quot;");
+    }
+
+    // Initialize on load
+    fetchFromGoogleSheet();
+  </script>
+</body>
+</html>
